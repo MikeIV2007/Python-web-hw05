@@ -1,18 +1,3 @@
-# https://youtu.be/8Juj_G_kDaE
-# 6:00 01_aiohttp_client
-# 18:00 01_2aiohttp_client_custom
-# 20:30 01.3 2aiohttp_gether
-# 26:30 01.4 request_privat
-# 34:00 task_runner_asyncawait
-# 52:20 file_sort_asincawait
-# 1:00:00 sync_async
-# 1:06:20 for await
-# 1:12:20 asinc for
-# 1:17:00 websocket / see folder chat
-
-
-# code server form conspect Web socket witj permanent connection
-
 import aiohttp
 import asyncio
 import logging
@@ -38,25 +23,24 @@ async def get_exchange(date):
 
 
 class Server:
-    clients = set() # data base of clients / claients prermonently  connected to the cocket
+    clients = set()
 
-    async def register(self, ws: WebSocketServerProtocol): # registration of clients (adding to database set())
-        ws.name = names.get_full_name() # ws - web socket / getting random names of users to create a new web socket 
+    async def register(self, ws: WebSocketServerProtocol):
+        ws.name = names.get_full_name()
         self.clients.add(ws)
         logging.info(f'{ws.remote_address} connects')
 
-    async def unregister(self, ws: WebSocketServerProtocol): # removes clients from database set()
+    async def unregister(self, ws: WebSocketServerProtocol):
         self.clients.remove(ws)
         logging.info(f'{ws.remote_address} disconnects')
 
-    async def send_to_clients(self, message: str): # sends message to all clients from database
+    async def send_to_clients(self, message: str):
         print (54, message)
         if self.clients:
-            #[await client.send(message) for client in self.clients]
             for client in self.clients:
                 await client.send(message) 
 
-    async def ws_handler(self, ws: WebSocketServerProtocol): # processing of connection
+    async def ws_handler(self, ws: WebSocketServerProtocol):
         await self.register(ws)
         print (59, ws)
         try:
@@ -66,7 +50,7 @@ class Server:
         finally:
             await self.unregister(ws)
 
-    async def distrubute(self, ws: WebSocketServerProtocol): # sends message to clients         
+    async def distrubute(self, ws: WebSocketServerProtocol):        
         async for message in ws:
                 
             message_list = message.strip().lower().split()
@@ -94,10 +78,10 @@ class Server:
             else:
                 await self.send_to_clients(f"{ws.name}: {message}")
                 
-async def main(): # starts server
+async def main():
     server = Server()  
     async with websockets.serve(server.ws_handler, 'localhost', 8080):
-        await asyncio.Future()  # run forever
+        await asyncio.Future()
 
 if __name__ == '__main__':
     asyncio.run(main())
