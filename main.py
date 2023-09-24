@@ -7,7 +7,7 @@ import sys
 import aiohttp
 
 
-async def request(date, currencies_list):
+async def request(date, currency):
     async with aiohttp.ClientSession() as session:
         async with session.get(
             f"https://api.privatbank.ua/p24api/exchange_rates?json&date={date}"
@@ -15,32 +15,22 @@ async def request(date, currencies_list):
             if recponse.status == 200:
                 result = await recponse.json()
                 exchangeRate_list = result["exchangeRate"]
-                currency_dict = {}
-                for curr in currencies_list:
-                    exc_dict = {}
-                    (exc,) = list(
-                        filter(lambda el: el["currency"] == curr, exchangeRate_list)
-                    )
-                    exc_dict["sale"] = exc["saleRateNB"]
-                    exc_dict["purchase"] = exc["purchaseRateNB"]
-                    currency_dict[curr] = exc_dict
-                return currency_dict
-
-
-async def get_exchange(quantity, additional_carrency):
+                exc_dict = {}
+                (exc,) = list(
+                    filter(lambda el: el["currency"] == currency, exchangeRate_list)
+                )
+                exc_dict["sale"] = exc["saleRateNB"]
+                exc_dict["purchase"] = exc["purchaseRateNB"] 
+                return exc_dict
+            
+def get_dates(quantity):
     dates = []
-    result_dict = {}
     current_date = datetime.date.today()
     for _ in range(quantity):
         date = current_date.strftime("%d.%m.%Y")
         dates.append(date)
-        current_date -= datetime.timedelta(days=1)
-
-    for date in dates:
-        m = await request(date, additional_carrency)
-        result_dict[date] = m
-    result_list = [result_dict]
-    return result_list
+        current_date -= datetime.timedelta(days=1) 
+    return dates  
 
 
 def get_currensies_list(additional_currency):
@@ -102,11 +92,21 @@ def get_args():
 
 
 def main():
-    quantity, currensies_list = get_args()
     if platform.system() == "Windows":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    result = asyncio.run(get_exchange(quantity, currensies_list))
-    print (f'\nDays quantity: {quantity},  Currenscies: {(", ").join(currensies_list)}: \n\n{result}\n')
+    quantity, currensies_list = get_args()
+    dates = get_dates(quantity)
+    
+    date_dict = {} 
+    for date in dates:
+        currency_dict = {}
+        for currency in currensies_list:
+            exc_dict  = asyncio.run(request(date, currency))
+            currency_dict[currency] = exc_dict
+        date_dict[date] = currency_dict
+    result_list = [date_dict]
+    print (f'\nDays quantity: {quantity},  Currenscies: {currensies_list}: \n\n{result_list}\n')
+    #print (result_list)
 
 
 if __name__ == "__main__":
