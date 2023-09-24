@@ -1,3 +1,4 @@
+from aiofile import async_open
 import aiohttp
 import asyncio
 import logging
@@ -35,14 +36,16 @@ class Server:
         logging.info(f'{ws.remote_address} disconnects')
 
     async def send_to_clients(self, message: str):
-        print (54, message)
         if self.clients:
             for client in self.clients:
-                await client.send(message) 
+                await client.send(message)
+
+    async def log(self, message: str):
+        async with async_open("exchange_log.txt", "a") as log_file:
+            await log_file.write(message + '\n')
 
     async def ws_handler(self, ws: WebSocketServerProtocol):
         await self.register(ws)
-        print (59, ws)
         try:
             await self.distrubute(ws) 
         except WebSocketProtocolError as err:
@@ -64,7 +67,6 @@ class Server:
                         quantity = 10
                 except (ValueError, IndexError):
                     quantity = 10
-                print(83, quantity)
                 dates = []
                 current_date = datetime.date.today()
                 for _ in range(quantity):
@@ -72,14 +74,22 @@ class Server:
                     dates.append(date)
                     current_date -= datetime.timedelta(days=1)
                 await self.send_to_clients(f'Currencies rates for the last {quantity} days:\n')
+                message_list = []
                 for date in dates:
                     m = await get_exchange(date)
-                    await self.send_to_clients(m)
+                    message_list.append(m)
+                message = " || ".join(message_list)
+
+                await self.log(f'{message}')
+                logging.info("Message sent to log file")
+                await self.send_to_clients(message)
+                logging.info('Message sent to the clients')
+
             else:
                 await self.send_to_clients(f"{ws.name}: {message}")
                 
 async def main():
-    server = Server()  
+    server = Server()
     async with websockets.serve(server.ws_handler, 'localhost', 8080):
         await asyncio.Future()
 
